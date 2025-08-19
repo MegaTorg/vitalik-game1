@@ -124,6 +124,8 @@ function restart() {
     let collected = coins.filter(c => c.collected).length;
     score -= collected;
     if (score < 0) score = 0;
+    // Remove all coins
+    coins = [];
     hero.x = W()/4;
     hero.y = H()/2;
     hero.vx = 0;
@@ -230,10 +232,9 @@ function restart() {
             ) {
                 // If falling on enemy, defeat it
                 if (!e.falling && hero.vy > 0 && hero.y < e.y) {
-                    e.falling = true;
-                    e.vy = 2;
-                    hero.vy = -hero.jump * 0.7;
-                    score += 5;
+                e.falling = true;
+                e.vy = 2;
+                hero.vy = -hero.jump * 0.7;
                 } else if (!e.falling) {
                     // Otherwise, restart
                     restart();

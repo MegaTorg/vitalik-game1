@@ -119,15 +119,19 @@
         keys[e.key.toLowerCase()] = false;
     });
 
-    function restart() {
-        hero.x = W()/4;
-        hero.y = H()/2;
-        hero.vx = 0;
-        hero.vy = 0;
-        hero.grounded = false;
-        hero.anim = 0;
-        resetPlatforms();
-    }
+function restart() {
+    // Remove collected coins from score
+    let collected = coins.filter(c => c.collected).length;
+    score -= collected;
+    if (score < 0) score = 0;
+    hero.x = W()/4;
+    hero.y = H()/2;
+    hero.vx = 0;
+    hero.vy = 0;
+    hero.grounded = false;
+    hero.anim = 0;
+    resetPlatforms();
+}
 
     // Physics
     const gravity = 0.7;

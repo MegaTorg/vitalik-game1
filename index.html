@@ -217,7 +217,22 @@ function restart() {
                 // Bounce off platform edges
                 let plat = platforms.find(p => e.x > p.x && e.x < p.x + p.w && Math.abs(e.y + e.h/2 - p.y) < 10);
                 if (plat) {
-                    if (e.x < plat.x + 10 || e.x > plat.x + plat.w - 10) e.vx *= -1;
+                    if (e.x < plat.x + 10) {
+                        e.x = plat.x + 10;
+                        e.vx *= -1;
+                    } else if (e.x > plat.x + plat.w - 10) {
+                        e.x = plat.x + plat.w - 10;
+                        e.vx *= -1;
+                    }
+                } else {
+                    // If not on a platform, reverse direction at screen edge
+                    if (e.x < 0) {
+                        e.x = 0;
+                        e.vx *= -1;
+                    } else if (e.x > W()) {
+                        e.x = W();
+                        e.vx *= -1;
+                    }
                 }
             } else {
                 e.vy = (e.vy || 0) + 0.7;

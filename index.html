@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caped Underwear Hero Platformer</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background: #222;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            display: block;
+            margin: 0 auto;
+            background: linear-gradient(to top, #222 80%, #4ec6e0 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 40px #000a;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .instructions {
+            color: #fff;
+            text-align: center;
+            font-family: sans-serif;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="600" height="600"></canvas>
+    <div class="instructions">
+        <p>Use <b>Arrow keys</b> or <b>WASD</b> to move and jump.<br>Press <b>R</b> to restart.</p>
+    </div>
+    <script>
+    // --- Platformer Game ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    const RADIUS = W/2;
+
+    // Hero properties
+    const hero = {
+        x: W/2,
+        y: H-80,
+        vx: 0,
+        vy: 0,
+        w: 36,
+        h: 48,
+        speed: 3.2,
+        jump: 10.5,
+        grounded: false,
+        color: '#ffe0a0',
+        capeColor: '#e22',
+        underwearColor: '#fff',
+        direction: 1,
+        anim: 0
+    };
+
+    // Platforms
+    let platforms = [];
+    function resetPlatforms() {
+        platforms = [
+            {x: W/2-60, y: H-40, w: 120, h: 16},
+            {x: W/2-120, y: H-120, w: 80, h: 14},
+            {x: W/2+40, y: H-200, w: 100, h: 14},
+            {x: W/2-100, y: H-280, w: 60, h: 12},
+            {x: W/2+60, y: H-360, w: 80, h: 12},
+            {x: W/2-40, y: H-440, w: 120, h: 16},
+        ];
+    }
+    resetPlatforms();
+
+    // Input
+    const keys = {};
+    window.addEventListener('keydown', e => {
+        keys[e.key.toLowerCase()] = true;
+        if (e.key === 'r' || e.key === 'R') restart();
+    });
+    window.addEventListener('keyup', e => {
+        keys[e.key.toLowerCase()] = false;
+    });
+
+    function restart() {
+        hero.x = W/2;
+        hero.y = H-80;
+        hero.vx = 0;
+        hero.vy = 0;
+        hero.grounded = false;
+        hero.anim = 0;
+        resetPlatforms();
+    }
+
+    // Physics
+    const gravity = 0.5;
+    const friction = 0.8;
+    const airFriction = 0.98;
+    const jumpCooldown = 8;
+    let jumpTimer = 0;
+
+    function update() {
+        // Controls
+        let left = keys['arrowleft'] || keys['a'];
+        let right = keys['arrowright'] || keys['d'];
+        let up = keys['arrowup'] || keys['w'] || keys[' '];
+
+        if (left) {
+            hero.vx -= hero.speed * 0.6;
+            hero.direction = -1;
+        }
+        if (right) {
+            hero.vx += hero.speed * 0.6;
+            hero.direction = 1;
+        }
+        // Friction
+        if (hero.grounded) hero.vx *= friction;
+        else hero.vx *= airFriction;
+
+        // Gravity
+        hero.vy += gravity;
+        // Jump
+        if (up && hero.grounded && jumpTimer <= 0) {
+            hero.vy = -hero.jump;
+            hero.grounded = false;
+            jumpTimer = jumpCooldown;
+        }
+        if (jumpTimer > 0) jumpTimer--;
+
+        // Move
+        hero.x += hero.vx;
+        hero.y += hero.vy;
+
+        // Keep inside circle
+        let dx = hero.x - W/2;
+        let dy = hero.y - H/2;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist > RADIUS-hero.w/2) {
+            let angle = Math.atan2(dy, dx);
+            hero.x = W/2 + (RADIUS-hero.w/2) * Math.cos(angle);
+            hero.y = H/2 + (RADIUS-hero.h/2) * Math.sin(angle);
+            hero.vx *= -0.5;
+            hero.vy *= -0.5;
+        }
+
+        // Platform collision
+        hero.grounded = false;
+        for (let p of platforms) {
+            if (
+                hero.x + hero.w/2 > p.x &&
+                hero.x - hero.w/2 < p.x + p.w &&
+                hero.y + hero.h/2 > p.y &&
+                hero.y + hero.h/2 < p.y + p.h &&
+                hero.vy > 0
+            ) {
+                hero.y = p.y - hero.h/2;
+                hero.vy = 0;
+                hero.grounded = true;
+            }
+        }
+
+        // Loop if falls below
+        if (hero.y > H + 40) restart();
+
+        // Win if reaches top
+        if (hero.y < 60) restart();
+    }
+
+    function drawHero() {
+        ctx.save();
+        ctx.translate(hero.x, hero.y);
+        ctx.scale(hero.direction, 1);
+        // Cape
+        ctx.beginPath();
+        ctx.moveTo(-8, -hero.h/2+8);
+        ctx.bezierCurveTo(-30, 0, -30, 30, 0, hero.h/2-6);
+        ctx.lineTo(0, hero.h/2-6);
+        ctx.closePath();
+        ctx.fillStyle = hero.capeColor;
+        ctx.globalAlpha = 0.7;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        // Body
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 14, 22, 0, 0, Math.PI*2);
+        ctx.fillStyle = hero.color;
+        ctx.fill();
+        // Underwear
+        ctx.beginPath();
+        ctx.ellipse(0, 12, 12, 7, 0, 0, Math.PI);
+        ctx.fillStyle = hero.underwearColor;
+        ctx.fill();
+        // Head
+        ctx.beginPath();
+        ctx.arc(0, -18, 10, 0, Math.PI*2);
+        ctx.fillStyle = hero.color;
+        ctx.fill();
+        // Eyes
+        ctx.beginPath();
+        ctx.arc(-4, -20, 2, 0, Math.PI*2);
+        ctx.arc(4, -20, 2, 0, Math.PI*2);
+        ctx.fillStyle = '#222';
+        ctx.fill();
+        // Smile
+        ctx.beginPath();
+        ctx.arc(0, -15, 4, 0, Math.PI);
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawPlatforms() {
+        ctx.save();
+        ctx.fillStyle = '#444';
+        for (let p of platforms) {
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+        }
+        ctx.restore();
+    }
+
+    function drawCircleMask() {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(W/2, H/2, RADIUS, 0, Math.PI*2);
+        ctx.clip();
+        ctx.clearRect(0, 0, W, H);
+        ctx.restore();
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, W, H);
+        drawCircleMask();
+        drawPlatforms();
+        drawHero();
+    }
+
+    function gameLoop() {
+        update();
+        render();
+        requestAnimationFrame(gameLoop);
+    }
+    gameLoop();
+    </script>
+</body>
+</html>
